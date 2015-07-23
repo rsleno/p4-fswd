@@ -1,0 +1,3 @@
+*.pyc
+settings.py
+static/js/app.js
