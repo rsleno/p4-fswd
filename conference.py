@@ -12,6 +12,7 @@ created by wesc on 2014 apr 21
 
 __author__ = 'wesc+api@google.com (Wesley Chun)'
 
+import logging
 
 from datetime import datetime
 
@@ -125,10 +126,15 @@ class ConferenceApi(remote.Service):
             raise endpoints.BadRequestException("Session 'name' field required")
 
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
+     
+        c_key = ndb.Key(Profile, user_id, Conference, int(request.conferenceId))
+        conf = Conference.query(ancestor=c_key)
 
-        p_key = ndb.Key(Profile, user_id)
-        s_id = Session.allocate_ids(size=1, parent=p_key)[0]
-        s_key = ndb.Key(Session, s_id, parent=p_key)
+        if not conf.get():
+            raise endpoints.BadRequestException("Conference creator required")
+
+        s_id = Session.allocate_ids(size=1, parent=c_key)[0]
+        s_key = ndb.Key(Session, s_id, parent=c_key)
         data['key'] = s_key
 
         Session(**data).put()
@@ -560,11 +566,6 @@ class ConferenceApi(remote.Service):
     def filterPlayground(self, request):
         """Filter Playground"""
         q = Conference.query()
-        # field = "city"
-        # operator = "="
-        # value = "London"
-        # f = ndb.query.FilterNode(field, operator, value)
-        # q = q.filter(f)
         q = q.filter(Conference.city=="London")
         q = q.filter(Conference.topics=="Medical Innovations")
         q = q.filter(Conference.month==6)
@@ -573,10 +574,13 @@ class ConferenceApi(remote.Service):
             items=[self._copyConferenceToForm(conf, "") for conf in q]
         )
 
+# - - - Sessions - - - - - - - - - - - - - - - - - - - -
+
     @endpoints.method(SessionForm, SessionForm,
-            path='conference/session/create',
+            path='session/create',
             http_method='POST', name='createSession')
     def createSession(self, request):
+        """Create new session."""
         return self._createSessionObject(request)
 
 
