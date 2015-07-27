@@ -57,6 +57,7 @@ class Session(ndb.Model):
     typeOfSession   = ndb.StringProperty()
     date            = ndb.DateProperty() 
     startTime       = ndb.TimeProperty()
+    conferenceId    = ndb.StringProperty()
 
 class SessionForm(messages.Message):
     """SessionForm -- Session outbound form message"""
@@ -67,6 +68,7 @@ class SessionForm(messages.Message):
     typeOfSession   = messages.StringField(5)
     date            = messages.StringField(6)
     startTime       = messages.StringField(7)
+    conferenceId    = messages.StringField(8)
 
 class Conference(ndb.Model):
     """Conference -- Conference object"""
@@ -80,7 +82,7 @@ class Conference(ndb.Model):
     endDate         = ndb.DateProperty()
     maxAttendees    = ndb.IntegerProperty()
     seatsAvailable  = ndb.IntegerProperty()
-    sessions        = ndb.StructuredProperty(Session, repeated=True)
+    #sessions        = ndb.StructuredProperty(Session, repeated=True)
 
 class ConferenceForm(messages.Message):
     """ConferenceForm -- Conference outbound form message"""
