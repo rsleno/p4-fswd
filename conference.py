@@ -587,4 +587,18 @@ def _createSessionObject(self, request):
         return self._createSessionObject(request)
 
 
+    @endpoints.method(SES_GET_REQUEST, SessionForms,
+            path='session/{websafeConferenceKey}',
+            http_method='GET', name='getConferenceSessions')
+    def getConferenceSessions(self, request):
+        """Return requested Conference Sessions (by websafeConferenceKey)."""
+        conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
+        if not conf:
+            raise endpoints.NotFoundException(
+                'No conference found with key: %s' % request.websafeConferenceKey)
+
+        return True
+
+
+
 api = endpoints.api_server([ConferenceApi]) # register API
