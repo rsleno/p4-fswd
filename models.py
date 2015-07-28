@@ -68,7 +68,12 @@ class SessionForm(messages.Message):
     typeOfSession   = messages.StringField(5)
     date            = messages.StringField(6)
     startTime       = messages.StringField(7)
-    conferenceId    = messages.StringField(8)
+    websafeKey      = messages.StringField(8)
+    conferenceId    = messages.StringField(9)
+
+class SessionForms(messages.Message):
+    """SessionForms -- multiple Sessions outbound form message"""
+    items = messages.MessageField(SessionForm, 1, repeated=True)
 
 class Conference(ndb.Model):
     """Conference -- Conference object"""
