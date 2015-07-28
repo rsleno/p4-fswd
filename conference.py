@@ -96,26 +96,10 @@ CONF_POST_REQUEST = endpoints.ResourceContainer(
 class ConferenceApi(remote.Service):
     """Conference API v0.1"""
 
-# - - - Conference objects - - - - - - - - - - - - - - - - -
 
-    def _copyConferenceToForm(self, conf, displayName):
-        """Copy relevant fields from Conference to ConferenceForm."""
-        cf = ConferenceForm()
-        for field in cf.all_fields():
-            if hasattr(conf, field.name):
-                # convert Date to date string; just copy others
-                if field.name.endswith('Date'):
-                    setattr(cf, field.name, str(getattr(conf, field.name)))
-                else:
-                    setattr(cf, field.name, getattr(conf, field.name))
-            elif field.name == "websafeKey":
-                setattr(cf, field.name, conf.key.urlsafe())
-        if displayName:
-            setattr(cf, 'organizerDisplayName', displayName)
-        cf.check_initialized()
-        return cf
+# - - - Session objects - - - - - - - - - - - - - - - - -
 
-    def _createSessionObject(self, request):
+def _createSessionObject(self, request):
         """Create or update Session object, returning SessionForm/request."""
         user = endpoints.get_current_user()
         if not user:
@@ -141,6 +125,25 @@ class ConferenceApi(remote.Service):
         
         return request
 
+
+# - - - Conference objects - - - - - - - - - - - - - - - - -
+
+    def _copyConferenceToForm(self, conf, displayName):
+        """Copy relevant fields from Conference to ConferenceForm."""
+        cf = ConferenceForm()
+        for field in cf.all_fields():
+            if hasattr(conf, field.name):
+                # convert Date to date string; just copy others
+                if field.name.endswith('Date'):
+                    setattr(cf, field.name, str(getattr(conf, field.name)))
+                else:
+                    setattr(cf, field.name, getattr(conf, field.name))
+            elif field.name == "websafeKey":
+                setattr(cf, field.name, conf.key.urlsafe())
+        if displayName:
+            setattr(cf, 'organizerDisplayName', displayName)
+        cf.check_initialized()
+        return cf
 
     def _createConferenceObject(self, request):
         """Create or update Conference object, returning ConferenceForm/request."""
