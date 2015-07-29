@@ -99,7 +99,7 @@ class ConferenceApi(remote.Service):
 
 # - - - Session objects - - - - - - - - - - - - - - - - -
 
-def _createSessionObject(self, request):
+    def _createSessionObject(self, request):
         """Create or update Session object, returning SessionForm/request."""
         user = endpoints.get_current_user()
         if not user:
@@ -112,19 +112,21 @@ def _createSessionObject(self, request):
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
      
         c_key = ndb.Key(Profile, user_id, Conference, int(request.conferenceId))
-        conf = Conference.query(ancestor=c_key)
+        #conf = Conference.query(ancestor=c_key)
+        
+        conf = c_key.get()
+        logging.debug(conf)
 
-        if not conf.get():
+        if not conf:
             raise endpoints.BadRequestException("Conference creator required")
 
         s_id = Session.allocate_ids(size=1, parent=c_key)[0]
         s_key = ndb.Key(Session, s_id, parent=c_key)
         data['key'] = s_key
-
         Session(**data).put()
-        
+        #conf.sessions.append(wsck)
+        #conf.put()
         return request
-
 
 # - - - Conference objects - - - - - - - - - - - - - - - - -
 
@@ -587,7 +589,7 @@ def _createSessionObject(self, request):
         return self._createSessionObject(request)
 
 
-    @endpoints.method(SES_GET_REQUEST, SessionForms,
+    @endpoints.method(CONF_GET_REQUEST, SessionForms,
             path='session/{websafeConferenceKey}',
             http_method='GET', name='getConferenceSessions')
     def getConferenceSessions(self, request):
@@ -596,8 +598,7 @@ def _createSessionObject(self, request):
         if not conf:
             raise endpoints.NotFoundException(
                 'No conference found with key: %s' % request.websafeConferenceKey)
-
-        return True
+        return request
 
 
 
