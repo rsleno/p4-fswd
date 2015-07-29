@@ -68,7 +68,7 @@ class SessionForm(messages.Message):
     typeOfSession   = messages.StringField(5)
     date            = messages.StringField(6)
     startTime       = messages.StringField(7)
-    websafeKey      = messages.StringField(8)
+    #websafeKey      = messages.StringField(8)
     conferenceId    = messages.StringField(9)
 
 class SessionForms(messages.Message):
@@ -87,7 +87,7 @@ class Conference(ndb.Model):
     endDate         = ndb.DateProperty()
     maxAttendees    = ndb.IntegerProperty()
     seatsAvailable  = ndb.IntegerProperty()
-    #sessions        = ndb.StructuredProperty(Session, repeated=True)
+    sessions        = ndb.StringProperty(repeated=True)
 
 class ConferenceForm(messages.Message):
     """ConferenceForm -- Conference outbound form message"""
