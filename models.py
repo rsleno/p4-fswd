@@ -57,7 +57,6 @@ class Session(ndb.Model):
     typeOfSession   = ndb.StringProperty()
     date            = ndb.DateProperty() 
     startTime       = ndb.TimeProperty()
-    conferenceId    = ndb.StringProperty()
 
 class SessionForm(messages.Message):
     """SessionForm -- Session outbound form message"""
@@ -68,8 +67,7 @@ class SessionForm(messages.Message):
     typeOfSession   = messages.StringField(5)
     date            = messages.StringField(6)
     startTime       = messages.StringField(7)
-    #websafeKey      = messages.StringField(8)
-    conferenceId    = messages.StringField(9)
+    websafeKey      = messages.StringField(8)
 
 class SessionForms(messages.Message):
     """SessionForms -- multiple Sessions outbound form message"""
