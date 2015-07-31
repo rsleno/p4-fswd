@@ -64,9 +64,9 @@ class SessionForm(messages.Message):
     highlights      = messages.StringField(2)
     speaker         = messages.StringField(3)
     duration        = messages.StringField(4)
-    typeOfSession   = messages.StringField(5)
-    date            = messages.StringField(6)
-    startTime       = messages.StringField(7)
+    typeOfSession   = messages.EnumField('TypeOfSession', 5)
+    date            = messages.StringField(6) #DateTimeField()
+    startTime       = messages.StringField(7) #DateTimeField()
     websafeKey      = messages.StringField(8)
 
 class SessionForms(messages.Message):
@@ -81,7 +81,7 @@ class Conference(ndb.Model):
     topics          = ndb.StringProperty(repeated=True)
     city            = ndb.StringProperty()
     startDate       = ndb.DateProperty()
-    month           = ndb.IntegerProperty() # TODO: do we need for indexing like Java?
+    month           = ndb.IntegerProperty() 
     endDate         = ndb.DateProperty()
     maxAttendees    = ndb.IntegerProperty()
     seatsAvailable  = ndb.IntegerProperty()
@@ -123,6 +123,13 @@ class TeeShirtSize(messages.Enum):
     XXL_W = 13
     XXXL_M = 14
     XXXL_W = 15
+
+class TypeOfSession(messages.Enum):
+    """TypeOfSession -- types of session enumeration value"""
+    keynote = 1
+    workshop = 2
+    lecture = 3
+    other = 4
 
 class ConferenceQueryForm(messages.Message):
     """ConferenceQueryForm -- Conference query inbound form message"""
