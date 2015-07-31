@@ -112,8 +112,6 @@ class ConferenceApi(remote.Service):
         for field in sf.all_fields():
             if hasattr(ses, field.name):
                 setattr(sf, field.name, getattr(ses, field.name))
-            #elif field.name == "websafeKey":
-            #    setattr(sf, field.name, ses.key.urlsafe())
         sf.check_initialized()
         return sf
 
@@ -129,6 +127,7 @@ class ConferenceApi(remote.Service):
 
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
         del data['websafeKey']
+        data['typeOfSession'] = str(data['typeOfSession'])
      
         c_key = ndb.Key(urlsafe=request.websafeKey)
         conf = c_key.get()
@@ -136,22 +135,17 @@ class ConferenceApi(remote.Service):
         if not conf:
             raise endpoints.BadRequestException("Conference creator required")
 
+        # Create index and store Session
         s_id = Session.allocate_ids(size=1, parent=c_key)[0]
         s_key = ndb.Key(Session, s_id, parent=c_key)
         data['key'] = s_key
         Session(**data).put()
         
-        # Append Session Key to Conference
+        # Append Session Key to the Conference
         conf.sessions.append(s_key.urlsafe())
         conf.put()
-
-        # Copy request data to a SessionForm for returning it
-        ses = SessionForm()
-        for field in ses.all_fields():
-            if hasattr(request, field.name):
-                setattr(ses, field.name, getattr(request, field.name))
         
-        return ses
+        return self._copySessionToForm(request)
 
 # - - - Conference objects - - - - - - - - - - - - - - - - -
 
@@ -630,7 +624,5 @@ class ConferenceApi(remote.Service):
         )
 
 # ahRzfmNhbGNpdW0tdGFzay05NTgxMnIvCxIHUHJvZmlsZSIQcnNsZW5vQGdtYWlsLmNvbQwLEgpDb25mZXJlbmNlGNT3Bww
-
-# ahRzfmNhbGNpdW0tdGFzay05NTgxMnI-CxIHUHJvZmlsZSIQcnNsZW5vQGdtYWlsLmNvbQwLEgpDb25mZXJlbmNlGNT3BwwLEgdTZXNzaW9uGPL1Egw
 
 api = endpoints.api_server([ConferenceApi]) # register API
