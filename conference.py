@@ -87,6 +87,12 @@ CONF_POST_REQUEST = endpoints.ResourceContainer(
     websafeConferenceKey=messages.StringField(1),
 )
 
+SES_POST_REQUEST = endpoints.ResourceContainer(
+    SessionForm,
+    websafeKey=messages.StringField(1),
+)
+
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
@@ -110,12 +116,12 @@ class ConferenceApi(remote.Service):
             raise endpoints.BadRequestException("Session 'name' field required")
 
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
+        del data['websafeKey']
      
-        c_key = ndb.Key(Profile, user_id, Conference, int(request.conferenceId))
-        #conf = Conference.query(ancestor=c_key)
-        
+        c_key = ndb.Key(urlsafe=request.websafeKey)
         conf = c_key.get()
-        logging.debug(conf)
+
+        # ahRzfmNhbGNpdW0tdGFzay05NTgxMnIvCxIHUHJvZmlsZSIQcnNsZW5vQGdtYWlsLmNvbQwLEgpDb25mZXJlbmNlGJG_BQw
 
         if not conf:
             raise endpoints.BadRequestException("Conference creator required")
@@ -124,9 +130,18 @@ class ConferenceApi(remote.Service):
         s_key = ndb.Key(Session, s_id, parent=c_key)
         data['key'] = s_key
         Session(**data).put()
-        #conf.sessions.append(wsck)
-        #conf.put()
-        return request
+        
+        # Append Session Key to Conference
+        conf.sessions.append(s_key.urlsafe())
+        conf.put()
+
+        # copy request data to SessionForm for returning it
+        ses = SessionForm()
+        for field in ses.all_fields():
+            if hasattr(request, field.name):
+                setattr(ses, field.name, getattr(request, field.name))
+        
+        return ses
 
 # - - - Conference objects - - - - - - - - - - - - - - - - -
 
@@ -581,24 +596,24 @@ class ConferenceApi(remote.Service):
 
 # - - - Sessions - - - - - - - - - - - - - - - - - - - -
 
-    @endpoints.method(SessionForm, SessionForm,
-            path='session/create',
+    @endpoints.method(SES_POST_REQUEST, SessionForm,
+            path='conference/{websafeKey}/session/create',
             http_method='POST', name='createSession')
     def createSession(self, request):
         """Create new session."""
         return self._createSessionObject(request)
 
 
-    @endpoints.method(CONF_GET_REQUEST, SessionForms,
+    """@endpoints.method(CONF_GET_REQUEST, SessionForms,
             path='session/{websafeConferenceKey}',
             http_method='GET', name='getConferenceSessions')
     def getConferenceSessions(self, request):
-        """Return requested Conference Sessions (by websafeConferenceKey)."""
+        #Return requested Conference Sessions (by websafeConferenceKey).
         conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
         if not conf:
             raise endpoints.NotFoundException(
                 'No conference found with key: %s' % request.websafeConferenceKey)
-        return request
+        return request"""
 
 
 
