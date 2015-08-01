@@ -52,9 +52,9 @@ class Session(ndb.Model):
     """Conference Sessions -- Session object"""
     name            = ndb.StringProperty(required=True)
     highlights      = ndb.StringProperty()
-    speaker         = ndb.StringProperty()
+    speaker         = ndb.StringProperty(required=True)
     duration        = ndb.StringProperty()
-    typeOfSession   = ndb.StringProperty()
+    typeOfSession   = ndb.StringProperty(required=True)
     date            = ndb.DateProperty() 
     startTime       = ndb.TimeProperty()
 
