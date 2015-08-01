@@ -89,9 +89,13 @@ CONF_POST_REQUEST = endpoints.ResourceContainer(
     websafeConferenceKey=messages.StringField(1),
 )
 
+SES_GET_REQUEST = endpoints.ResourceContainer(
+    webSafeSessionKey=messages.StringField(1),
+)
+
 SES_POST_REQUEST = endpoints.ResourceContainer(
     SessionForm,
-    websafeKey=messages.StringField(1),
+    websafeConferenceKey=messages.StringField(1),
 )
 
 SES_TP_GET_REQUEST = endpoints.ResourceContainer(
@@ -129,6 +133,8 @@ class ConferenceApi(remote.Service):
                     setattr(sf, field.name, str(getattr(ses, field.name)))
                 else:
                     setattr(sf, field.name, getattr(ses, field.name))
+            elif field.name == "websafeKey":
+                setattr(sf, field.name, ses.key.urlsafe())
         sf.check_initialized()
         return sf
 
@@ -147,14 +153,14 @@ class ConferenceApi(remote.Service):
             raise endpoints.BadRequestException("Session 'typeOfSession' field required")
 
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
-        del data['websafeKey']
+        del data['websafeConferenceKey']
         data['typeOfSession'] = str(data['typeOfSession'])
         if data['date']:
             data['date'] = datetime.strptime(data['date'][:10], "%Y-%m-%d").date()
         if data['startTime']:
             data['startTime'] = datetime.strptime(data['startTime'][:5], "%H:%M").time()
      
-        c_key = ndb.Key(urlsafe=request.websafeKey)
+        c_key = ndb.Key(urlsafe=request.websafeConferenceKey)
         conf = c_key.get()
 
         if not conf:
@@ -626,7 +632,7 @@ class ConferenceApi(remote.Service):
 # - - - Sessions - - - - - - - - - - - - - - - - - - - -
 
     @endpoints.method(SES_POST_REQUEST, SessionForm,
-            path='conference/{websafeKey}/session/create',
+            path='conference/{websafeConferenceKey}/session/create',
             http_method='POST', name='createSession')
     def createSession(self, request):
         """Create new session."""
@@ -673,8 +679,15 @@ class ConferenceApi(remote.Service):
         logging.debug(sessions)
         return SessionForms(items=[self._copySessionToForm(ses) for ses in sessions])
 
+# - - - Wishlist - - - - - - - - - - - - - - - - - - - -
 
-# ahRzfmNhbGNpdW0tdGFzay05NTgxMnIvCxIHUHJvZmlsZSIQcnNsZW5vQGdtYWlsLmNvbQwLEgpDb25mZXJlbmNlGNHKFgw
-# ahRzfmNhbGNpdW0tdGFzay05NTgxMnIvCxIHUHJvZmlsZSIQcnNsZW5vQGdtYWlsLmNvbQwLEgpDb25mZXJlbmNlGNXoDAw
+    @endpoints.method(SES_GET_REQUEST, SessionForm,
+        path='session/{webSafeSessionKey}/addToWishlist',
+        http_method='POST', name='addSessionToWishlist')
+    def addSessionToWishlist(self, request):
+        """Add Session to the Profile wishlist"""
+
+        return SessionForm()
+
 
 api = endpoints.api_server([ConferenceApi]) # register API
