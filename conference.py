@@ -683,10 +683,6 @@ class ConferenceApi(remote.Service):
 
     def _updateWishlist(self, request, reg):
         prof = self._getProfileFromUser()
-        #user = endpoints.get_current_user()
-        if not prof:
-            raise endpoints.UnauthorizedException('Authorization required')
-        #user_id = getUserId(user)
 
         ses = ndb.Key(urlsafe=request.websafeSessionKey).get()
         if not ses:
@@ -717,10 +713,22 @@ class ConferenceApi(remote.Service):
 
     @endpoints.method(SES_GET_REQUEST, BooleanMessage,
         path='session/{websafeSessionKey}/rmFromWishlist',
-        http_method='POST', name='removeSessionFromWishlist')
+        http_method='DELETE', name='removeSessionFromWishlist')
     def removeSessionFromWishlist(self, request):
         """Add Session to the Profile wishlist"""
         return self._updateWishlist(request, False) 
 
+
+    @endpoints.method(message_types.VoidMessage, SessionForms,
+        path='wishlist/sessions',
+        http_method='GET', name='getSessionsInWishlist')
+    def getSessionsInWishlist(self, request):
+        """Get Sessions from Profile wishlist"""
+        prof = self._getProfileFromUser()
+
+        sessions = [(ndb.Key(Session, sess)) for sess in prof.sessionWishlist]
+        
+        logging.debug(sessions)
+        return SessionForms(items=[self._copySessionToForm(ses) for ses in sessions])
 
 api = endpoints.api_server([ConferenceApi]) # register API
