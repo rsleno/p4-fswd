@@ -726,9 +726,9 @@ class ConferenceApi(remote.Service):
         """Get Sessions from Profile wishlist"""
         prof = self._getProfileFromUser()
 
-        sessions = [(ndb.Key(Session, sess)) for sess in prof.sessionWishlist]
-        
-        logging.debug(sessions)
+        s_keys = [(ndb.Key(urlsafe=sess)) for sess in prof.sessionWishlist]
+        sessions = ndb.get_multi(s_keys)
+
         return SessionForms(items=[self._copySessionToForm(ses) for ses in sessions])
 
 api = endpoints.api_server([ConferenceApi]) # register API
