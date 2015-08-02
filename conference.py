@@ -90,7 +90,7 @@ CONF_POST_REQUEST = endpoints.ResourceContainer(
 )
 
 SES_GET_REQUEST = endpoints.ResourceContainer(
-    webSafeSessionKey=messages.StringField(1),
+    websafeSessionKey=messages.StringField(1),
 )
 
 SES_POST_REQUEST = endpoints.ResourceContainer(
@@ -143,7 +143,7 @@ class ConferenceApi(remote.Service):
         user = endpoints.get_current_user()
         if not user:
             raise endpoints.UnauthorizedException('Authorization required')
-        user_id = getUserId(user)
+        #user_id = getUserId(user)
 
         if not request.name:
             raise endpoints.BadRequestException("Session 'name' field required")
@@ -681,13 +681,46 @@ class ConferenceApi(remote.Service):
 
 # - - - Wishlist - - - - - - - - - - - - - - - - - - - -
 
-    @endpoints.method(SES_GET_REQUEST, SessionForm,
-        path='session/{webSafeSessionKey}/addToWishlist',
+    def _updateWishlist(self, request, reg):
+        prof = self._getProfileFromUser()
+        #user = endpoints.get_current_user()
+        if not prof:
+            raise endpoints.UnauthorizedException('Authorization required')
+        #user_id = getUserId(user)
+
+        ses = ndb.Key(urlsafe=request.websafeSessionKey).get()
+        if not ses:
+            raise endpoints.NotFoundException(
+                'No session found with key: %s' % request.websafeSessionKey)
+
+        if reg:
+            if request.websafeSessionKey in prof.sessionWishlist:
+                raise ConflictException(
+                    "You have already added this session")
+            prof.sessionWishlist.append(request.websafeSessionKey)
+        else:
+            if request.websafeSessionKey not in prof.sessionWishlist:
+                raise ConflictException(
+                    "Can't find this session in your wishlist")
+            prof.sessionWishlist.remove(request.websafeSessionKey)
+        prof.put()
+        return BooleanMessage(data=reg)
+
+
+    @endpoints.method(SES_GET_REQUEST, BooleanMessage,
+        path='session/{websafeSessionKey}/addToWishlist',
         http_method='POST', name='addSessionToWishlist')
     def addSessionToWishlist(self, request):
         """Add Session to the Profile wishlist"""
+        return self._updateWishlist(request, True)
 
-        return SessionForm()
+
+    @endpoints.method(SES_GET_REQUEST, BooleanMessage,
+        path='session/{websafeSessionKey}/rmFromWishlist',
+        http_method='POST', name='removeSessionFromWishlist')
+    def removeSessionFromWishlist(self, request):
+        """Add Session to the Profile wishlist"""
+        return self._updateWishlist(request, False) 
 
 
 api = endpoints.api_server([ConferenceApi]) # register API
