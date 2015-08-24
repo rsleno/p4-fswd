@@ -89,6 +89,11 @@ CONF_POST_REQUEST = endpoints.ResourceContainer(
     websafeConferenceKey=messages.StringField(1),
 )
 
+CONF_TOPIC_GET_REQUEST = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    topic=messages.StringField(1),
+)
+
 SES_GET_REQUEST = endpoints.ResourceContainer(
     websafeSessionKey=messages.StringField(1),
 )
@@ -154,6 +159,7 @@ class ConferenceApi(remote.Service):
 
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
         del data['websafeConferenceKey']
+        del data['websafeKey']
         data['typeOfSession'] = str(data['typeOfSession'])
         if data['date']:
             data['date'] = datetime.strptime(data['date'][:10], "%Y-%m-%d").date()
@@ -729,6 +735,38 @@ class ConferenceApi(remote.Service):
         s_keys = [(ndb.Key(urlsafe=sess)) for sess in prof.sessionWishlist]
         sessions = ndb.get_multi(s_keys)
 
+        return SessionForms(
+            items=[self._copySessionToForm(ses) for ses in sessions]
+        )
+
+
+# - - - Aditional Queries - - - - - - - - - - - - - - - - - - - -
+
+    # Query 1: Get all conferences given a city and a date range 
+
+    # Query 2: Get all conferences of a given Topic
+    @endpoints.method(CONF_TOPIC_GET_REQUEST, ConferenceForms,
+        path='conferences/{topic}',
+        http_method='GET', name='getConferencesByTopic')
+    def getConferencesByTopic(self, request):
+        conf_query = Conference.query(Conference.topics==request.topic)
+        conferences = conf_query.fetch()
+        
+        return ConferenceForms(
+            items=[self._copyConferenceToForm(conf, "") for conf in conferences]
+        )
+
+@endpoints.method(message_types.VoidMessage, SessionForms,
+            path='task3',
+            http_method='GET', name='task3')
+    def task3(self, request):
+        """task3"""
+        now = datetime.now().time()
+        sessions = Session.query()
+        #sessions = sessions.filter(Session.typeOfSession != "workshop")
+        sessions = sessions.filter(Session.startTime < now)
+
         return SessionForms(items=[self._copySessionToForm(ses) for ses in sessions])
+
 
 api = endpoints.api_server([ConferenceApi]) # register API
