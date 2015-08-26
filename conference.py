@@ -14,7 +14,7 @@ __author__ = 'wesc+api@google.com (Wesley Chun)'
 
 import logging
 
-from datetime import datetime
+from datetime import datetime, time
 
 import endpoints
 from protorpc import messages
@@ -740,9 +740,8 @@ class ConferenceApi(remote.Service):
         )
 
 
-# - - - Aditional Queries - - - - - - - - - - - - - - - - - - - -
+# - - - Queries - - - - - - - - - - - - - - - - - - - -
 
-    # Query 1: Get all conferences given a city and a date range 
 
     # Query 2: Get all conferences of a given Topic
     @endpoints.method(CONF_TOPIC_GET_REQUEST, ConferenceForms,
@@ -756,16 +755,15 @@ class ConferenceApi(remote.Service):
             items=[self._copyConferenceToForm(conf, "") for conf in conferences]
         )
 
-@endpoints.method(message_types.VoidMessage, SessionForms,
-            path='task3',
-            http_method='GET', name='task3')
-    def task3(self, request):
-        """task3"""
-        now = datetime.now().time()
-        sessions = Session.query()
-        #sessions = sessions.filter(Session.typeOfSession != "workshop")
-        sessions = sessions.filter(Session.startTime < now)
-
+    # Solution to the inequality filter problem query
+    @endpoints.method(message_types.VoidMessage, SessionForms,
+        path='sessions/customquery',
+        http_method='GET', name='getNonWorkshopSessionsBefore19')
+    def getNonWorkshopSessionsBefore19(self, request):
+        """Task3: Solve the following query related problem"""
+        sessions = Session.query(ndb.OR(Session.typeOfSession < 'workshop',
+                                        Session.typeOfSession > 'workshop',
+                                        ndb.OR(Session.startTime < time(19, 00, 00))))
         return SessionForms(items=[self._copySessionToForm(ses) for ses in sessions])
 
 
