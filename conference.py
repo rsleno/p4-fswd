@@ -114,6 +114,11 @@ SES_SP_GET_REQUEST = endpoints.ResourceContainer(
     speaker=messages.StringField(1),
 )
 
+SES_SPEAKER_GET_REQUEST = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    speaker=messages.StringField(1),
+)
+
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -742,12 +747,23 @@ class ConferenceApi(remote.Service):
 
 # - - - Queries - - - - - - - - - - - - - - - - - - - -
 
+    # Query 1: Get all sessions of a given speaker
+    @endpoints.method(SES_SPEAKER_GET_REQUEST, SessionForms,
+        path='sessions/{speaker}',
+        http_method='GET', name='getSessionsBySpeaker')
+    def getSessionsBySpeaker(self, request):
+        """Get sessions of a given speaker"""
+        sessions = Session.query(Session.speaker == request.speaker).fetch()        
+        return SessionForms(
+            items=[self._copySessionToForm(ses) for ses in sessions]
+        )
 
     # Query 2: Get all conferences of a given Topic
     @endpoints.method(CONF_TOPIC_GET_REQUEST, ConferenceForms,
         path='conferences/{topic}',
         http_method='GET', name='getConferencesByTopic')
     def getConferencesByTopic(self, request):
+        """Get conferences of a given topic"""
         conf_query = Conference.query(Conference.topics==request.topic)
         conferences = conf_query.fetch()
         
