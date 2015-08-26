@@ -638,6 +638,7 @@ class ConferenceApi(remote.Service):
         data['key'] = s_key
         Session(**data).put()
 
+        # Check if the speaker has more sessions in the conference and add to memcache
         ses_keys = [ndb.Key(urlsafe=wssk) for wssk in conf.sessions]
         sessions = ndb.get_multi(ses_keys)
         if sessions:
@@ -800,13 +801,9 @@ class ConferenceApi(remote.Service):
 
 # - - - Task - - - - - - - - - - - - - - - - - - - -
     
-    #@endpoints.method()
-    #def getFeaturedSpeaker(self, request):
-    #    pass
-
-     @endpoints.method(message_types.VoidMessage, StringMessage,
-            path='conference/featuredspeaker/get',
-            http_method='GET', name='getFeaturedSpeaker')
+    @endpoints.method(message_types.VoidMessage, StringMessage,
+        path='conference/featuredspeaker/get',
+        http_method='GET', name='getFeaturedSpeaker')
     def getFeaturedSpeaker(self, request):
         """Return featured speaker from memcache."""
         return StringMessage(data=memcache.get(MEMCACHE_FEAT_SPEAKER_KEY) or "")
