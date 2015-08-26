@@ -52,6 +52,7 @@ from utils import getUserId
 EMAIL_SCOPE = endpoints.EMAIL_SCOPE
 API_EXPLORER_CLIENT_ID = endpoints.API_EXPLORER_CLIENT_ID
 MEMCACHE_ANNOUNCEMENTS_KEY = "RECENT_ANNOUNCEMENTS"
+MEMCACHE_FEAT_SPEAKER_KEY = "FEATURED SPEAKER"
 ANNOUNCEMENT_TPL = ('Last chance to attend! The following conferences '
                     'are nearly sold out: %s')
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -132,62 +133,7 @@ class ConferenceApi(remote.Service):
 
 # - - - Session objects - - - - - - - - - - - - - - - - -
 
-    def _copySessionToForm(self, ses):
-        """Copy relevant fields from Session to SessionForm."""
-        sf = SessionForm()
-        for field in sf.all_fields():
-            if hasattr(ses, field.name):
-                if field.name == 'typeOfSession':
-                    setattr(sf, field.name, getattr(TypeOfSession, str(getattr(ses, field.name))))
-                elif field.name == 'date' or field.name == 'startTime':
-                    setattr(sf, field.name, str(getattr(ses, field.name)))
-                else:
-                    setattr(sf, field.name, getattr(ses, field.name))
-            elif field.name == "websafeKey":
-                setattr(sf, field.name, ses.key.urlsafe())
-        sf.check_initialized()
-        return sf
-
-    def _createSessionObject(self, request):
-        """Create or update Session object, returning SessionForm/request."""
-        user = endpoints.get_current_user()
-        if not user:
-            raise endpoints.UnauthorizedException('Authorization required')
-        #user_id = getUserId(user)
-
-        if not request.name:
-            raise endpoints.BadRequestException("Session 'name' field required")
-        if not request.speaker:
-            raise endpoints.BadRequestException("Session 'speaker' field required")
-        if not request.typeOfSession:
-            raise endpoints.BadRequestException("Session 'typeOfSession' field required")
-
-        data = {field.name: getattr(request, field.name) for field in request.all_fields()}
-        del data['websafeConferenceKey']
-        del data['websafeKey']
-        data['typeOfSession'] = str(data['typeOfSession'])
-        if data['date']:
-            data['date'] = datetime.strptime(data['date'][:10], "%Y-%m-%d").date()
-        if data['startTime']:
-            data['startTime'] = datetime.strptime(data['startTime'][:5], "%H:%M").time()
-     
-        c_key = ndb.Key(urlsafe=request.websafeConferenceKey)
-        conf = c_key.get()
-
-        if not conf:
-            raise endpoints.BadRequestException("Conference creator required")
-
-        # Create index and store Session
-        s_id = Session.allocate_ids(size=1, parent=c_key)[0]
-        s_key = ndb.Key(Session, s_id, parent=c_key)
-        data['key'] = s_key
-        Session(**data).put()
-        
-        # Append Session Key to the Conference
-        conf.sessions.append(s_key.urlsafe())
-        conf.put()
-        
-        return self._copySessionToForm(request)
+    
 
 # - - - Conference objects - - - - - - - - - - - - - - - - -
 
@@ -642,6 +588,75 @@ class ConferenceApi(remote.Service):
 
 # - - - Sessions - - - - - - - - - - - - - - - - - - - -
 
+    def _copySessionToForm(self, ses):
+        """Copy relevant fields from Session to SessionForm."""
+        sf = SessionForm()
+        for field in sf.all_fields():
+            if hasattr(ses, field.name):
+                if field.name == 'typeOfSession':
+                    setattr(sf, field.name, getattr(TypeOfSession, str(getattr(ses, field.name))))
+                elif field.name == 'date' or field.name == 'startTime':
+                    setattr(sf, field.name, str(getattr(ses, field.name)))
+                else:
+                    setattr(sf, field.name, getattr(ses, field.name))
+            elif field.name == "websafeKey":
+                setattr(sf, field.name, ses.key.urlsafe())
+        sf.check_initialized()
+        return sf
+
+    def _createSessionObject(self, request):
+        """Create or update Session object, returning SessionForm/request."""
+        user = endpoints.get_current_user()
+        if not user:
+            raise endpoints.UnauthorizedException('Authorization required')
+
+        if not request.name:
+            raise endpoints.BadRequestException("Session 'name' field required")
+        if not request.speaker:
+            raise endpoints.BadRequestException("Session 'speaker' field required")
+        if not request.typeOfSession:
+            raise endpoints.BadRequestException("Session 'typeOfSession' field required")
+
+        data = {field.name: getattr(request, field.name) for field in request.all_fields()}
+        del data['websafeConferenceKey']
+        del data['websafeKey']
+        data['typeOfSession'] = str(data['typeOfSession'])
+        if data['date']:
+            data['date'] = datetime.strptime(data['date'][:10], "%Y-%m-%d").date()
+        if data['startTime']:
+            data['startTime'] = datetime.strptime(data['startTime'][:5], "%H:%M").time()
+     
+        c_key = ndb.Key(urlsafe=request.websafeConferenceKey)
+        conf = c_key.get()
+
+        if not conf:
+            raise endpoints.BadRequestException("Conference creator required")
+
+        # Create index and store Session
+        s_id = Session.allocate_ids(size=1, parent=c_key)[0]
+        s_key = ndb.Key(Session, s_id, parent=c_key)
+        data['key'] = s_key
+        Session(**data).put()
+
+        ses_keys = [ndb.Key(urlsafe=wssk) for wssk in conf.sessions]
+        sessions = ndb.get_multi(ses_keys)
+        if sessions:
+            ses_names = []
+            for ses in sessions:
+                if ses.speaker == data['speaker']:
+                    ses_names.append(ses.name)
+            f_speaker = data['speaker'].join(ses_names)
+            memcache.set(MEMCACHE_FEAT_SPEAKER_KEY, f_speaker)
+        else:
+            f_speaker = ""
+            memcache.delete(MEMCACHE_FEAT_SPEAKER_KEY)
+
+        # Append Session Key to the Conference
+        conf.sessions.append(s_key.urlsafe())
+        conf.put()
+        
+        return self._copySessionToForm(request)
+
     @endpoints.method(SES_POST_REQUEST, SessionForm,
             path='conference/{websafeConferenceKey}/session/create',
             http_method='POST', name='createSession')
@@ -781,6 +796,20 @@ class ConferenceApi(remote.Service):
                                         Session.typeOfSession > 'workshop',
                                         ndb.OR(Session.startTime < time(19, 00, 00))))
         return SessionForms(items=[self._copySessionToForm(ses) for ses in sessions])
+
+
+# - - - Task - - - - - - - - - - - - - - - - - - - -
+    
+    #@endpoints.method()
+    #def getFeaturedSpeaker(self, request):
+    #    pass
+
+     @endpoints.method(message_types.VoidMessage, StringMessage,
+            path='conference/featuredspeaker/get',
+            http_method='GET', name='getFeaturedSpeaker')
+    def getFeaturedSpeaker(self, request):
+        """Return featured speaker from memcache."""
+        return StringMessage(data=memcache.get(MEMCACHE_FEAT_SPEAKER_KEY) or "")
 
 
 api = endpoints.api_server([ConferenceApi]) # register API
