@@ -37,7 +37,7 @@ typeOfSession values are predefined in the enum TypeOfSession
 
 ####Speaker:
 
-Speaker has been defined as a String
+Speaker has been defined as a String to avoid complexity in the data model.
 
 ### Task3: Implemented queries:
 Query 1: Get all sessions of a given speaker (getSessionsBySpeaker)
