@@ -31,9 +31,9 @@ Session object has the following items: name, highlights, speaker, duration, typ
 
 All of them are StringProperties except for date (DateProperty) and startTime (TimeProperty)
 
-Required fields: name, speaker, typeOfSession
+The required fields are name, speaker, typeOfSession because of the use of these properties in queries.
 
-typeOfSession values are predefined in the enum TypeOfSession
+typeOfSession values are predefined in an enum TypeOfSession.
 
 ####Speaker:
 
