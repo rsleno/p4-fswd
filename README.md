@@ -24,21 +24,27 @@ App Engine application for the Udacity training course.
 1. Deploy your application.
 
 ## Project task explanations
-# Task1: Design choices
-**Session**
-Session object has the following items: name, highlights, speaker, duration, typeOfSession, date, startTime
+### Task1: Design choices
+#### Session:
+
+Session object has the following items: name, highlights, speaker, duration, typeOfSession, date, startTime.
+
 All of them are StringProperties except for date (DateProperty) and startTime (TimeProperty)
+
 Required fields: name, speaker, typeOfSession
+
 typeOfSession values are predefined in the enum TypeOfSession
-**Speaker**
+
+####Speaker:
+
 Speaker has been defined as a String
 
-# Task3: Implemented queries:
+### Task3: Implemented queries:
 Query 1: Get all sessions of a given speaker (getSessionsBySpeaker)
 Query 2: Get all conferences of a given Topic (getConferencesByTopic)
 
 
-# Task3: Query related problem 
+### Task3: Query related problem 
 The problem for implementing the query is that it can't be applied more than one inequality filter for different properties.
 My solution for this problem is to workaround the inequality filters with ndb.OR.
 Since:
