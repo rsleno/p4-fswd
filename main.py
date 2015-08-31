@@ -23,6 +23,11 @@ class SetAnnouncementHandler(webapp2.RequestHandler):
         ConferenceApi._cacheAnnouncement()
         self.response.set_status(204)
 
+class SetFeaturedSpeaker(webapp2.RequestHandler):
+    def get(self):
+        """Set Announcement in Memcache."""
+        ConferenceApi._cacheAnnouncement()
+        self.response.set_status(204)
 
 class SendConfirmationEmailHandler(webapp2.RequestHandler):
     def post(self):
