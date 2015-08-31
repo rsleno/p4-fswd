@@ -641,7 +641,12 @@ class ConferenceApi(remote.Service):
         # Check if the speaker has more sessions in the conference and add to memcache
         ses_keys = [ndb.Key(urlsafe=wssk) for wssk in conf.sessions]
         sessions = ndb.get_multi(ses_keys)
-        if sessions:
+        if len(list(sessions)) > 1:
+            taskqueue.add(params={'speaker': data['speaker']},
+                url='/tasks/set_featured_speaker'
+            )
+        
+        """if sessions:
             ses_names = []
             for ses in sessions:
                 if ses.speaker == data['speaker']:
@@ -650,7 +655,7 @@ class ConferenceApi(remote.Service):
             memcache.set(MEMCACHE_FEAT_SPEAKER_KEY, f_speaker)
         else:
             f_speaker = ""
-            memcache.delete(MEMCACHE_FEAT_SPEAKER_KEY)
+            memcache.delete(MEMCACHE_FEAT_SPEAKER_KEY)"""
 
         # Append Session Key to the Conference
         conf.sessions.append(s_key.urlsafe())
@@ -794,13 +799,32 @@ class ConferenceApi(remote.Service):
     def getNonWorkshopSessionsBefore19(self, request):
         """Task3: Solve the following query related problem"""
         sessions = Session.query(ndb.OR(Session.typeOfSession < 'workshop',
-                                        Session.typeOfSession > 'workshop',
-                                        ndb.OR(Session.startTime < time(19, 00, 00))))
+                                        Session.typeOfSession > 'workshop'),
+                                        ndb.OR(Session.startTime < time(19, 00, 00)))
         return SessionForms(items=[self._copySessionToForm(ses) for ses in sessions])
 
 
 # - - - Task - - - - - - - - - - - - - - - - - - - -
     
+    def _cacheFeaturedSpeaker(self):
+        """Create Featured Speaker & assign to memcache"""
+        ses = Session.query(Session.speaker = self.speaker)
+        ).fetch(projection=[Session.name])
+
+        if ses:
+            # If there are almost sold out conferences,
+            # format announcement and set it in memcache
+            announcement = ANNOUNCEMENT_TPL % (
+                ', '.join(conf.name for conf in confs))
+            memcache.set(MEMCACHE_ANNOUNCEMENTS_KEY, announcement)
+        else:
+            # If there are no sold out conferences,
+            # delete the memcache announcements entry
+            announcement = ""
+            memcache.delete(MEMCACHE_ANNOUNCEMENTS_KEY)
+
+        return announcement
+
     @endpoints.method(message_types.VoidMessage, StringMessage,
         path='conference/featuredspeaker/get',
         http_method='GET', name='getFeaturedSpeaker')
