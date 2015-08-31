@@ -61,8 +61,8 @@ is the same as:
 final result:
 
 ```sessions = Session.query(ndb.OR(Session.typeOfSession < 'workshop',
-                                    Session.typeOfSession > 'workshop',
-                                    ndb.OR(Session.startTime < time(19, 00, 00))))```
+                                    Session.typeOfSession > 'workshop'),
+                                    ndb.OR(Session.startTime < time(19, 00, 00)))```
 
 
 
