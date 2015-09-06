@@ -55,6 +55,7 @@ MEMCACHE_ANNOUNCEMENTS_KEY = "RECENT_ANNOUNCEMENTS"
 MEMCACHE_FEAT_SPEAKER_KEY = "FEATURED SPEAKER"
 ANNOUNCEMENT_TPL = ('Last chance to attend! The following conferences '
                     'are nearly sold out: %s')
+FEATURED = ('Check out other sessions of %s, %s')
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 DEFAULTS = {
@@ -639,10 +640,14 @@ class ConferenceApi(remote.Service):
         Session(**data).put()
 
         # Check if the speaker has more sessions in the conference and add to memcache
-        ses_keys = [ndb.Key(urlsafe=wssk) for wssk in conf.sessions]
-        sessions = ndb.get_multi(ses_keys)
+        #ses_keys = [ndb.Key(urlsafe=wssk) for wssk in conf.sessions]
+        #sessions = ndb.get_multi(ses_keys)
+        sessions = Session.query(ancestor=c_key)
+        sessions.filter(Session.speaker==data['speaker'])
+
         if len(list(sessions)) > 1:
-            taskqueue.add(params={'speaker': data['speaker']},
+            taskqueue.add(params={'speaker': data['speaker'],
+                'conf_key': request.websafeConferenceKey},
                 url='/tasks/set_featured_speaker'
             )
         
@@ -806,24 +811,23 @@ class ConferenceApi(remote.Service):
 
 # - - - Task - - - - - - - - - - - - - - - - - - - -
     
-    def _cacheFeaturedSpeaker(self):
+    @staticmethod
+    def _cacheFeaturedSpeaker(speaker, conf_key):
         """Create Featured Speaker & assign to memcache"""
-        ses = Session.query(Session.speaker = self.speaker)
-        ).fetch(projection=[Session.name])
+        c_key = ndb.Key(urlsafe=conf_key)
+        sessions = Session.query(ancestor=c_key)
+        sessions.filter(Session.speaker==speaker)
+        sessions.fetch()
 
-        if ses:
-            # If there are almost sold out conferences,
-            # format announcement and set it in memcache
-            announcement = ANNOUNCEMENT_TPL % (
-                ', '.join(conf.name for conf in confs))
-            memcache.set(MEMCACHE_ANNOUNCEMENTS_KEY, announcement)
+        if sessions:
+            featured = FEATURED % (speaker,
+                ', '.join(ses.name for ses in sessions))
+            memcache.set(MEMCACHE_FEAT_SPEAKER_KEY, featured)
         else:
-            # If there are no sold out conferences,
-            # delete the memcache announcements entry
-            announcement = ""
-            memcache.delete(MEMCACHE_ANNOUNCEMENTS_KEY)
+            featured = ""
+            memcache.delete(MEMCACHE_FEAT_SPEAKER_KEY)
 
-        return announcement
+        return featured
 
     @endpoints.method(message_types.VoidMessage, StringMessage,
         path='conference/featuredspeaker/get',
