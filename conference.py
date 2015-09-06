@@ -55,7 +55,7 @@ MEMCACHE_ANNOUNCEMENTS_KEY = "RECENT_ANNOUNCEMENTS"
 MEMCACHE_FEAT_SPEAKER_KEY = "FEATURED SPEAKER"
 ANNOUNCEMENT_TPL = ('Last chance to attend! The following conferences '
                     'are nearly sold out: %s')
-FEATURED = ('Check out other sessions of %s, %s')
+FEATURED = ('Sessions from %s: %s')
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 DEFAULTS = {
@@ -640,27 +640,15 @@ class ConferenceApi(remote.Service):
         Session(**data).put()
 
         # Check if the speaker has more sessions in the conference and add to memcache
-        #ses_keys = [ndb.Key(urlsafe=wssk) for wssk in conf.sessions]
-        #sessions = ndb.get_multi(ses_keys)
-        sessions = Session.query(ancestor=c_key)
-        sessions.filter(Session.speaker==data['speaker'])
+        sess = Session.query(ancestor=c_key)
+        sess = sess.filter(Session.speaker==data['speaker'])
+        sessions = sess.fetch()
 
         if len(list(sessions)) > 1:
             taskqueue.add(params={'speaker': data['speaker'],
                 'conf_key': request.websafeConferenceKey},
                 url='/tasks/set_featured_speaker'
             )
-        
-        """if sessions:
-            ses_names = []
-            for ses in sessions:
-                if ses.speaker == data['speaker']:
-                    ses_names.append(ses.name)
-            f_speaker = data['speaker'].join(ses_names)
-            memcache.set(MEMCACHE_FEAT_SPEAKER_KEY, f_speaker)
-        else:
-            f_speaker = ""
-            memcache.delete(MEMCACHE_FEAT_SPEAKER_KEY)"""
 
         # Append Session Key to the Conference
         conf.sessions.append(s_key.urlsafe())
@@ -713,7 +701,6 @@ class ConferenceApi(remote.Service):
         """Return requested Sessions across all Conferences by speaker"""
         sess = Session.query(Session.speaker==request.speaker)
         sessions = sess.fetch()
-        logging.debug(sessions)
         return SessionForms(items=[self._copySessionToForm(ses) for ses in sessions])
 
 # - - - Wishlist - - - - - - - - - - - - - - - - - - - -
@@ -814,10 +801,10 @@ class ConferenceApi(remote.Service):
     @staticmethod
     def _cacheFeaturedSpeaker(speaker, conf_key):
         """Create Featured Speaker & assign to memcache"""
-        c_key = ndb.Key(urlsafe=conf_key)
-        sessions = Session.query(ancestor=c_key)
-        sessions.filter(Session.speaker==speaker)
-        sessions.fetch()
+
+        sess = Session.query(ancestor=ndb.Key(urlsafe=conf_key))
+        sess = sess.filter(Session.speaker==speaker)
+        sessions = sess.fetch()
 
         if sessions:
             featured = FEATURED % (speaker,
