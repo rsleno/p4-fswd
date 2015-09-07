@@ -48,21 +48,10 @@ Query 2: Get all conferences of a given Topic (getConferencesByTopic)
 ### Task3: Query related problem 
 The problem for implementing the query is that it can't be applied more than one inequality filter for different properties.
 
-My solution for this problem is to workaround the inequality filters with ndb.OR.
+My solution for this problem is to combine App Engine functionality and native python filtering.
 
-Since:
-
-```query = Session.query(Session.typeOfSession != 'workshop')```
-
-is the same as:
-
-```query = Session.query(ndb.OR(Session.typeOfSession < 'workshop', Session.typeOfSession > 'workshop'))```
-
-final result:
-
-```sessions = Session.query(ndb.OR(Session.typeOfSession < 'workshop',
-                                    Session.typeOfSession > 'workshop'),
-                                    ndb.OR(Session.startTime < time(19, 00, 00)))```
+sessions = Session.query(Session.startTime < time(19, 00, 00)).fetch()
+return SessionForms(items=[self._copySessionToForm(ses) for ses in sessions if ses.typeOfSession != 'workshop'])
 
 
 
