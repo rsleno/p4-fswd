@@ -790,10 +790,8 @@ class ConferenceApi(remote.Service):
         http_method='GET', name='getNonWorkshopSessionsBefore19')
     def getNonWorkshopSessionsBefore19(self, request):
         """Task3: Solve the following query related problem"""
-        sessions = Session.query(ndb.OR(Session.typeOfSession < 'workshop',
-                                        Session.typeOfSession > 'workshop'),
-                                        ndb.OR(Session.startTime < time(19, 00, 00)))
-        return SessionForms(items=[self._copySessionToForm(ses) for ses in sessions])
+        sessions = Session.query(Session.startTime < time(19, 00, 00)).fetch()
+        return SessionForms(items=[self._copySessionToForm(ses) for ses in sessions if ses.typeOfSession != 'workshop'])
 
 
 # - - - Task - - - - - - - - - - - - - - - - - - - -
